@@ -1,0 +1,121 @@
+'''
+**                                                                                     **
+**                                                                                     **
+**              ____                   ______ _____  ______ __  __                     **
+**             / __ \                 |  ____|  __ \|  ____|  \/  |                    **
+**            | |  | |_ __   ___ _ __ | |__  | |  | | |__  | \  / |                    **
+**            | |  | | '_ \ / _ \ '_ \|  __| | |  | |  __| | |\/| |                    **
+**            | |__| | |_) |  __/ | | | |    | |__| | |____| |  | |                    **
+**             \____/| .__/ \___|_| |_|_|    |_____/|______|_|  |_|                    **
+**                   | |                     OpenFree Finite Element                   **
+**                   |_|                         and Discrete Element Method Solver    **
+**                                                                                     **
+**        OpenFDEM : Object Oriented Open Free Finite Discrete Element Code            **
+**                                                                                     **
+**            Copyright (C) 2017 - 2023   Xiaofeng Li                                  **
+**                         Email: xfli@whrsm.ac.cn                                     **
+**                                                                                     **
+**                                                                                     **
+**     This library is free software; you can redistribute it and/or                   **
+**     modify it under the terms of the GNU Lesser General Public                      **
+**     License as published by the Free Software Foundation; either                    **
+**     version 2.1 of the License, or (at your option) any later version.              **
+**                                                                                     **
+**     This program is distributed in the hope that it will be useful,                 **
+**     but WITHOUT ANY WARRANTY; without even the implied warranty of                  **
+**     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU               **
+**    Lesser General Public License for more details.                                  **
+**                                                                                     **
+**    You should have received a copy of the GNU Lesser General Public                 **
+**    License along with this library; if not, write to the Free Software              **
+**    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA   **
+'''
+# general comments of this input file!  in OpenFDEM input file, the symbol of "#" is special 
+# for comment in one line. and the symbol pairs of " ''' “ is special for comments in several 
+# lines
+
+# initialization, this command is to clear the memory in your last run, it is not mandatory 
+# but strongly recommend.
+of.new
+
+# Set the path folder of your output results, //result// in the same path of your input file 
+# will be created by default
+of.set.result "result"
+
+# Set the number of cores you want to use, the parallization will be automatically turned on
+# when you use the following command, otherwise the serilization will be used by default
+of.set.omp 15
+
+
+###################################### create mesh #########################################
+of.geometry.square 'rock' [0 1 0 1]
+of.geometry.cut.circle 'hole' 'rock' [0.5 0.5 0.05 100]
+
+of.geometry.mesh.size 'default' 0.03
+of.geometry.mesh auto
+
+of.group.element 'excavation' range circle.in [0.5 0.5 0.05]
+
+################################# assign material parameters ###############################
+# Assign material for matrix.
+of.mat.element 'default' elastic den 2700 E 30e9 v 0.3 damp 1.0
+# assign materials for contacts
+of.mat.contact 'default' MC fric 0.3
+
+##################################### create groups ########################################
+# OpenFDEM can manually group the nodes, elements, cohesive elements and edges by using the 
+# region of box, circle and plane.
+of.group.edge 'bottom' range plane.on [0.0 0.0 1.0 0.0]
+of.group.edge 'up' range plane.on [0.0 1.0 1.0 1.0]
+of.group.edge 'left' range plane.on [0.0 0.0 0.0 1.0]
+of.group.edge 'right' range plane.on [1.0 0.0 1.0 1.0]
+
+################################### assign boundaries ######################################
+# Set the in-situ stresses at the boundaries
+of.boundary.element.stress [rock] xx -30e6 xy 0.0 yy -5e6
+
+# add absorbing boundary to quickly balance the model
+of.boundary.edge.viscous 'up'  normal shear
+of.boundary.edge.viscous 'bottom'  normal shear
+of.boundary.edge.viscous 'right'  normal shear
+of.boundary.edge.viscous 'left'  normal shear
+
+####################################### set output ###########################################
+# Set the interval of writing ParaView results.
+of.history.pv.interval 2000
+# Output all results by default.
+of.history.pv.field default
+of.history.pv.fracture default
+
+##################################### execute model #########################################
+
+# Run the in-situ stress equilibrium step. Energy equilibrium is achieved when the maximum 
+# velocity is less than 1e-5 or the kinematic ratio is less than 1e-5 or the mechanical ratio 
+# is less than 1e-5
+of.step 50000
+
+# insert CZM after achieve the equlibrium of in-situ stresses
+of.mesh.insert 'default'
+of.mat.cohesive 'default' EM ten 1e6 coh 20e6 fric 0.8 GI 2 GII 40 
+of.boundary.excavation 'excavation'
+
+# Clear the absorbing boundaries
+of.boundary.edge.clear 'up'
+of.boundary.edge.clear 'bottom'
+of.boundary.edge.clear 'right'
+of.boundary.edge.clear 'left'
+
+# Add pressures at the external boundaries
+of.boundary.edge.pressure 'right'  normal 30e6  
+of.boundary.edge.pressure 'up'  normal 5e6  
+of.boundary.edge.pressure 'bottom'  normal 5e6  
+of.boundary.edge.pressure 'left' normal 30e6 
+
+# Run the excavation step
+of.step 500000
+
+# Finalize the model and clear the memory
+of.finalize
+
+
+

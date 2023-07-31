@@ -1,0 +1,104 @@
+'''
+**                                                                                     **
+**                                                                                     **
+**              ____                   ______ _____  ______ __  __                     **
+**             / __ \                 |  ____|  __ \|  ____|  \/  |                    **
+**            | |  | |_ __   ___ _ __ | |__  | |  | | |__  | \  / |                    **
+**            | |  | | '_ \ / _ \ '_ \|  __| | |  | |  __| | |\/| |                    **
+**            | |__| | |_) |  __/ | | | |    | |__| | |____| |  | |                    **
+**             \____/| .__/ \___|_| |_|_|    |_____/|______|_|  |_|                    **
+**                   | |                     OpenFree Finite Element                   **
+**                   |_|                         and Discrete Element Method Solver    **
+**                                                                                     **
+**        OpenFDEM : Object Oriented Open Free Finite Discrete Element Code            **
+**                                                                                     **
+**            Copyright (C) 2017 - 2021   Xiaofeng Li                                  **
+**                         Email: xfli@whrsm.ac.cn                                     **
+**                                                                                     **
+**                                                                                     **
+**     This library is free software; you can redistribute it and/or                   **
+**     modify it under the terms of the GNU Lesser General Public                      **
+**     License as published by the Free Software Foundation; either                    **
+**     version 2.1 of the License, or (at your option) any later version.              **
+**                                                                                     **
+**     This program is distributed in the hope that it will be useful,                 **
+**     but WITHOUT ANY WARRANTY; without even the implied warranty of                  **
+**     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU               **
+**    Lesser General Public License for more details.                                  **
+**                                                                                     **
+**    You should have received a copy of the GNU Lesser General Public                 **
+**    License along with this library; if not, write to the Free Software              **
+**    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA   **
+'''
+#general comments of this input file!  in Openfdem inputfile, the symbol of "#" is special for comment in one line
+# and the the symbol pairs of " ''' "  is special for comments in several lines
+
+# initialization, this command is to clear the memory in your last run, it is not mandatory but strongly recommend.
+of.new
+
+# set the path folder of your output results, //result// in the same path of your input file will be created by default
+of.set.result "MyResult"
+
+# predefine a DFN domain
+of.geometry.domain xmin -12 xmax 12 ymin -12 ymax 12
+of.geometry.minsize 0.3
+of.geometry.minangle 20
+# set the number of cores you want to use, the parallization will be automatically turned one
+# when you use the following command, otherwise the serilization will be used by default
+of.set.omp 15
+
+############################################### create mesh ##############################################################
+# create a box having the group tag 'rock', the box is defined by the minmuum and maximuum coords of each edge, you can also use
+# of.geometry.square 'rock' x [minvalue, maxvalue] y [minvalue, maxvalue], at here, bracket and comma are not mandatory, but strongly recommend you do like this or 
+# of.geometry.square 'rock'  [x_minvalue, x_maxvalue, y_minvalue, y_maxvalue], at here, the values in the bracket should strictly follow the order and the bracket is
+# also mandatory
+of.geometry.square 'rock' xmin -10 xmax 10 ymin -10 ymax 10
+
+# you are required to define a domain you are going to use jsets or DFNs, the random joints will be created in the range of domain
+# you can create gauss random distributed, uniform distributed and constant(equal distance) DFNs by changing the keywords of dip, space, length and method threshold
+# we can use the count, P21 and P10 to control how many DFNs you want to create, because the bad segments, which have less length than the minsize or have a bad intersection angle
+# less than minangle with another segment will be deleted, therefore the iteration will be operated to optimize the DFNs, it is also possible the itertaion is not converged, it will
+# print warning on the console, please terminate the running and change the threshold if it is possible.
+
+# you can also change the iteration count by using of.geometry.iteration 500, the default value is 1000
+
+of.geometry.cut.dfn 'DFN-1' 'rock' count 200 n_dip 60 5 n_length 3 1
+of.geometry.cut.dfn 'DFN-2' 'rock' p10 1.2 n_dip 120 5 n_length 3 1
+# of.geometry.cut.dfn 'DFN-3' 'rock' p21 0.8 n_dip 120 5 n_length 3 1
+
+of.geometry.mesh.size default 0.3
+
+of.geometry.mesh delaunay  
+
+of.mesh.insert 'default'
+############################################### assgin material parameters #############################################
+# assign material for matrix, there is no order requirement for the different parameters
+# you can also assign different materials for different parts by assigning the group tags
+of.mat.element 'default' elastic density 2700 E 5e8 v 0.2 damp 0.7
+# heat exchange in cohesive elements
+of.mat.cohesive 'default' EM ten 1e6 coh 3e6 fric 0.3 GI 10 GII 50
+# conductivity of thermal in contacts
+of.mat.contact 'default' MC fric 0.3 
+
+############################################### set ouput #########################################################
+# set the interval of writting paraview results, 1000 cycles is by default, too many files (small interval) will occpuy a huge memory
+# and slow down the computation, because the results writting almost costs 20% of the total time in one cycle
+of.history.pv.interval 500
+# set the field variables you want to export, for example dispalcement, stress, velocity and so on, 'default' means it will output all variables
+# the results file will have big size
+of.history.pv.field default
+of.history.pv.fracture default
+
+############################################### excuate model #########################################################
+# you can manually set the timestep if you understand the logic of explict method enough, otherwise please use the timestep suggested by the
+# system, it will also give you a warning if your fixed timestep is larger than the default timestep. Wrong timestep will cause collapse of runing 
+# and also results in wrong results
+#of.timestep fix 1e-9
+
+# to excuate the model
+of.step 1
+# finalize the model and clear the memory
+of.finalize
+
+
+

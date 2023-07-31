@@ -1,0 +1,96 @@
+'''
+**                                                                                     **
+**                                                                                     **
+**              ____                   ______ _____  ______ __  __                     **
+**             / __ \                 |  ____|  __ \|  ____|  \/  |                    **
+**            | |  | |_ __   ___ _ __ | |__  | |  | | |__  | \  / |                    **
+**            | |  | | '_ \ / _ \ '_ \|  __| | |  | |  __| | |\/| |                    **
+**            | |__| | |_) |  __/ | | | |    | |__| | |____| |  | |                    **
+**             \____/| .__/ \___|_| |_|_|    |_____/|______|_|  |_|                    **
+**                   | |                     OpenFree Finite Element                   **
+**                   |_|                         and Discrete Element Method Solver    **
+**                                                                                     **
+**        OpenFDEM : Object Oriented Open Free Finite Discrete Element Code            **
+**                                                                                     **
+**            Copyright (C) 2017 - 2023   Xiaofeng Li                                  **
+**                         Email: xfli@whrsm.ac.cn                                     **
+**                                                                                     **
+**                                                                                     **
+**     This library is free software; you can redistribute it and/or                   **
+**     modify it under the terms of the GNU Lesser General Public                      **
+**     License as published by the Free Software Foundation; either                    **
+**     version 2.1 of the License, or (at your option) any later version.              **
+**                                                                                     **
+**     This program is distributed in the hope that it will be useful,                 **
+**     but WITHOUT ANY WARRANTY; without even the implied warranty of                  **
+**     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU               **
+**    Lesser General Public License for more details.                                  **
+**                                                                                     **
+**    You should have received a copy of the GNU Lesser General Public                 **
+**    License along with this library; if not, write to the Free Software              **
+**    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA   **
+'''
+# general comments of this input file!  in OpenFDEM input file, the symbol of "#" is special 
+# for comment in one line. and the symbol pairs of " ''' “ is special for comments in several 
+# lines
+
+# initialization, this command is to clear the memory in your last run, it is not mandatory 
+# but strongly recommend.
+of.new
+
+# Set the path folder of your output results, //result// in the same path of your input file 
+# will be created by default
+of.set.result "result"
+
+# Set the number of cores you want to use, the parallization will be automatically turned on
+# when you use the following command, otherwise the serilization will be used by default
+of.set.omp 15
+
+##################################### create mesh ##########################################
+of.geometry.square 'barleft' xmin 0 xmax 1.0 ymin  0 ymax 0.2
+of.geometry.square 'barright' xmin 1.0 xmax 2.0 ymin  0 ymax 0.2
+of.geometry.mesh.size 'default' 0.05
+of.geometry.recombine 'barright' 
+of.geometry.mesh delaunay 
+
+################################# assign material parameters ################################
+# assign material for matrix
+of.mat.element 'default' elastic density 2700 E 5e8 v 0.2
+# heat exchange in cohesive elements
+of.mat.cohesive 'default' EM ten 1e6 coh 3e6 fric 0.3 GI 10 GII 50 heat_exchage 20
+# conductivity of thermal in contacts
+of.mat.contact 'default' MC fric 0.3 conductivity 200
+
+#set thermal matrix parameter
+of.mat.thermal 'default' conductivity 160 spec-heat 0.2 expansion 1e-6
+
+##################################### create groups #########################################
+of.group.nodal 'left' range plane.on x0 0.0 y0 0.0 x1 0.0 y1 0.2
+of.group.nodal 'right' range plane.on  x0 2.0 y0  0.0 x1 2.0 y1 0.2
+of.group.nodal 'up' range plane.on  x0 0.0 y0  0.2 x1 2.0 y1 0.2
+of.group.nodal 'down' range plane.on x0 0.0 y0  0.0 x1 2.0 y1 0.0
+
+################################### assign boundaries #######################################
+# boundaries can be assigned after you define the groups
+of.boundary.thermal.temperature 'left' T 50
+of.boundary.thermal.temperature 'right' T 0.0
+of.boundary.nodal.velocity 'right' x 0.0 y 0.0
+of.boundary.nodal.velocity 'up' x 0.0 y 0.0
+of.boundary.nodal.velocity 'down' x 0.0 y 0.0
+
+####################################### set output ##########################################
+# Set the interval of writing ParaView results.
+of.history.pv.interval 500
+of.history.pv.field default
+of.history.pv.fracture default
+
+##################################### execute model #########################################
+# set the timestep for thermal module
+of.thermal.timestep 5e-5
+# to excuate the model
+of.step 15000
+# finalize the model and clear the memory
+of.finalize
+
+
+

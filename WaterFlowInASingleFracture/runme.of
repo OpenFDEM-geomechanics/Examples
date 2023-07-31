@@ -1,0 +1,115 @@
+'''
+**                                                                                     **
+**                                                                                     **
+**              ____                   ______ _____  ______ __  __                     **
+**             / __ \                 |  ____|  __ \|  ____|  \/  |                    **
+**            | |  | |_ __   ___ _ __ | |__  | |  | | |__  | \  / |                    **
+**            | |  | | '_ \ / _ \ '_ \|  __| | |  | |  __| | |\/| |                    **
+**            | |__| | |_) |  __/ | | | |    | |__| | |____| |  | |                    **
+**             \____/| .__/ \___|_| |_|_|    |_____/|______|_|  |_|                    **
+**                   | |                     OpenFree Finite Element                   **
+**                   |_|                         and Discrete Element Method Solver    **
+**                                                                                     **
+**        OpenFDEM : Object Oriented Open Free Finite Discrete Element Code            **
+**                                                                                     **
+**            Copyright (C) 2017 - 2021   Xiaofeng Li                                  **
+**                         Email: xfli@whrsm.ac.cn                                     **
+**                                                                                     **
+**                                                                                     **
+**     This library is free software; you can redistribute it and/or                   **
+**     modify it under the terms of the GNU Lesser General Public                      **
+**     License as published by the Free Software Foundation; either                    **
+**     version 2.1 of the License, or (at your option) any later version.              **
+**                                                                                     **
+**     This program is distributed in the hope that it will be useful,                 **
+**     but WITHOUT ANY WARRANTY; without even the implied warranty of                  **
+**     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU               **
+**    Lesser General Public License for more details.                                  **
+**                                                                                     **
+**    You should have received a copy of the GNU Lesser General Public                 **
+**    License along with this library; if not, write to the Free Software              **
+**    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA   **
+'''
+#general comments of this input file!  in Openfdem inputfile, the symbol of "#" is special for comment in one line
+# and the the symbol pairs of " ''' "  is special for comments in several lines
+
+# initialization, this command is to clear the memory in your last run, it is not mandatory but strongly recommend.
+of.new
+
+# set the path folder of your output results, //result// in the same path of your input file will be created by default
+of.set.result "MyResult"
+
+# set the number of cores you want to use, the parallization will be automatically turned one
+# when you use the following command, otherwise the serilization will be used by default
+of.set.omp 15
+
+############################################### create mesh ##############################################################
+# create a box having the group tag 'rock', the box is defined by the minmuum and maximuum coords of each edge, you can also use
+# of.geometry.square 'rock' x [minvalue, maxvalue] y [minvalue, maxvalue], at here, bracket and comma are not mandatory, but strongly recommend you do like this or 
+# of.geometry.square 'rock'  [x_minvalue, x_maxvalue, y_minvalue, y_maxvalue], at here, the values in the bracket should strictly follow the order and the bracket is
+# also mandatory
+of.geometry.square 'rock' xmin 0 xmax 1.0 ymin -0.05 ymax 0.05
+of.geometry.cut.joint 'joint' 'rock' x0 0.0 y0 0.0 x1 1.0 y1 0.0
+
+of.geometry.mesh.size 'default' 0.01
+of.geometry.mesh.size 'joint' 0.002
+of.geometry.mesh delaunay
+
+of.mesh.insert 'default'
+of.group.cohelement 'joint' range plane.on x0 0.0 y0 0.0 x1 1.0 y1 0.0
+of.cohelement.delete "joint"
+############################################### assgin material parameters #############################################
+# assign material for matrix, there is no order requirement for the different parameters
+# you can also assign different materials for different parts by assigning the group tags
+of.mat.element 'default' elastic density 2700 E 5e8 v 0.2
+of.mat.cohesive 'default' EM tension 5e6 cohesion 10e6 fric 0.5 GI 5 GII 100
+of.mat.contact 'default' MC fric 0.5
+
+#set fracture flow parameter
+of.mat.hydro.fluid density 1000.0 K 2.0e7 viscosity 1e-3 
+of.mat.hydro.fracture 'default' a0 3e-5 amin 3e-5 amax 10e-5
+of.mat.hydro.fracture 'joint' a0 10e-5 amin 10e-5 amax 10e-5
+
+############################################### create groups #########################################################
+# OpenFDEM can manually group the nodes, elements, cohesive elements and edges by using the region of box, circle, plane
+# the groups can also be created by inherting from other parts, for example, nodes from elements, cohesive elements from edges
+# you can also use bool command to create more complex geomtries
+# for a very compelx model, youc can try to create from input file, OpenFDEM will import the node and element groups ifnormation from the 
+# .msh or .inp files
+of.group.nodal 'water' range box.in xmin -100.0 xmax 0.001 ymin -0.001 ymax 0.001
+of.group.nodal 'bottom' range box.in xmin -100 xmax 100 ymin -100 ymax -0.049
+of.group.nodal 'up' range box.in xmin -100 xmax 100 ymin 0.049 ymax 100
+of.group.nodal 'right' range box.in xmin 0.999 xmax 1.0 ymin -100 ymax 100
+
+############################################### assign boundaries #########################################################
+# boundaries can be assigned after you define the groups
+of.boundary.nodal.velocity  'right' x 0
+of.boundary.nodal.velocity  'up' x 0 y 0
+of.boundary.nodal.velocity  'bottom' x 0 y 0
+of.boundary.hydro.inipressure  'water' p 9.5e6
+
+############################################### set ouput #########################################################
+# set the interval of writting paraview results, 1000 cycles is by default, too many files (small interval) will occpuy a huge memory
+# and slow down the computation, because the results writting almost costs 20% of the total time in one cycle
+of.history.pv.interval 1000
+# set the field variables you want to export, for example dispalcement, stress, velocity and so on, 'default' means it will output all variables
+# the results file will have big size
+of.history.pv.field default
+of.history.pv.fracture default
+
+############################################### excuate model #########################################################
+# you can manually set the timestep if you understand the logic of explict method enough, otherwise please use the timestep suggested by the
+# system, it will also give you a warning if your fixed timestep is larger than the default timestep. Wrong timestep will cause collapse of runing 
+# and also results in wrong results
+#of.timestep fix 1e-9
+
+# subcycles of mechanical module
+of.hydro.substeps 1
+
+# to excuate the model
+of.step 20000
+# finalize the model and clear the memory
+of.finalize
+
+
+
