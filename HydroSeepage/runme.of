@@ -57,7 +57,7 @@ of.mat.element 'default' elastic density 2700 E 5e8 v 0.2
 of.mat.contact 'default' MC fric 0.5
 
 #set matrix parameter
-of.mat.hydro.matrix 'default' permiability 2e-8 Biot_K 22.0e9 Biot_c 0.1 prosity 0.2
+of.mat.hydro.matrix 'default' permeability 2e-8 Biot_K 22.0e9 Biot_c 0.1 prosity 0.2
 
 ##################################### create groups ########################################
 # OpenFDEM can manually group the nodes, elements, cohesive elements and edges by using the 
