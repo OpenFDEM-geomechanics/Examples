@@ -1,0 +1,80 @@
+'''
+**                                                                                     **
+**                                                                                     **
+**              ____                   ______ _____  ______ __  __                     **
+**             / __ \                 |  ____|  __ \|  ____|  \/  |                    **
+**            | |  | |_ __   ___ _ __ | |__  | |  | | |__  | \  / |                    **
+**            | |  | | '_ \ / _ \ '_ \|  __| | |  | |  __| | |\/| |                    **
+**            | |__| | |_) |  __/ | | | |    | |__| | |____| |  | |                    **
+**             \____/| .__/ \___|_| |_|_|    |_____/|______|_|  |_|                    **
+**                   | |                     OpenFree Finite Element                   **
+**                   |_|                         and Discrete Element Method Solver    **
+**                                                                                     **
+**        OpenFDEM : Object Oriented Open Free Finite Discrete Element Code            **
+**                                                                                     **
+**            Copyright (C) 2017 - 2023   Xiaofeng Li                                  **
+**                         Email: xfli@whrsm.ac.cn                                     **
+**                                                                                     **
+**                                                                                     **
+**     This library is free software; you can redistribute it and/or                   **
+**     modify it under the terms of the GNU Lesser General Public                      **
+**     License as published by the Free Software Foundation; either                    **
+**     version 2.1 of the License, or (at your option) any later version.              **
+**                                                                                     **
+**     This program is distributed in the hope that it will be useful,                 **
+**     but WITHOUT ANY WARRANTY; without even the implied warranty of                  **
+**     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU               **
+**    Lesser General Public License for more details.                                  **
+**                                                                                     **
+**    You should have received a copy of the GNU Lesser General Public                 **
+**    License along with this library; if not, write to the Free Software              **
+**    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA   **
+'''
+# general comments of this input file!  in OpenFDEM input file, the symbol of "#" is special 
+# for comment in one line. and the symbol pairs of " ''' “ is special for comments in several 
+# lines
+
+# initialization, this command is to clear the memory in your last run, it is not mandatory 
+# but strongly recommend.
+of.new
+
+# Set the path folder of your output results, //result// in the same path of your input file 
+# will be created by default
+of.set.result "result"
+
+# Set the number of cores you want to use, the parallization will be automatically turned on
+# when you use the following command, otherwise the serilization will be used by default
+of.set.omp 4
+
+# Define the geometry domain
+of.geometry.domain xmin -12 xmax 12 ymin -12 ymax 12
+
+
+###################################### create mesh #########################################
+
+# Create the boundary
+of.geometry.square 'rock' [-10 10 -10 10]
+
+# Remove a circle from the rock block
+of.geometry.remove.circle 'circle' 'rock' [5 7 1.5 20]
+
+# Remove a rectangle from the rock block
+of.geometry.remove.square 'square' 'rock' [-6 -4 4 9]
+
+# Cut the tunnel with an arc at the top
+of.geometry.cut.arc 'arc' 'rock' [0 0 2 0 180 10]
+of.geometry.cut.square 'base' 'rock' [-2 2 -5 0]
+
+# Insert discrete fracture networks
+of.geometry.cut.dfn 'DFN-1' 'rock' count 200 n_dip 60 5 n_length 3 1
+of.geometry.cut.dfn 'DFN-2' 'rock' p10 1.2 n_dip 120 5 n_length 3 1
+
+# Create the mesh
+of.geometry.mesh.size 'default' 0.5
+of.geometry.mesh auto
+
+# Finalize the model and clear the memory
+of.finalize
+
+
+
